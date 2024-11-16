@@ -2,6 +2,13 @@
 
 [中文版](./README.zh.md)
 
+
+## 项目预览
+
+![项目预览](./images/finally-effect.png)
+
+![项目预览](./images/final-effect.png)
+
 ## version
 
 > 1.0

@@ -2,6 +2,13 @@
 
 [English Version](./README.md)
 
+## 项目预览
+
+![项目预览](./images/finally-effect.png)
+
+![项目预览](./images/final-effect.png)
+
+
 ## 项目介绍
 
 🚀我的原型链可视化项目
