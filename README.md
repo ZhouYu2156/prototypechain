@@ -17,7 +17,7 @@
 
 ## Effect
 
-![prototypechain](./prototype-visualization.png)
+![prototypechain](./images/prototypechain.png)
 
 
 ## 📖Usage Instructions:

@@ -2,7 +2,15 @@
 
 [English Readme.md](./README.md)
 
-## 项目预览
+
+
+## 项目当前效果
+
+![prototypechain](./images/prototypechain.png)
+
+
+
+## 项目最终效果预览
 
 ![项目预览](./images/finally-effect.png)
 
