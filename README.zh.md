@@ -1,6 +1,6 @@
 # 原型链可视化项目
 
-[English Version](./README.md)
+[English Readme.md](./README.md)
 
 ## 项目预览
 
@@ -46,6 +46,18 @@ version 1.0  开源了
 
 📧邮箱：1043744584@qq.com
 
-👾Github：[zhouyu2156](https://github.com/zhouyu2156)
+👾Github：[我的github](https://github.com/zhouyu2156)
 
 🌐个人博客：[周玉的博客](https://www.zhouyu2156.cn/)
+
+
+
+## 最终效果视频
+
+
+
+[快速直达预览](https://www.zhihu.com/people/leo-csh/zvideos)
+
+
+
+:warning: 在此说明：由于原作者不再愿意公开此项目的访问和观看，所以这里算自己参照了他视频里的用户界面，做一个仿真版的。类似于Unix不开源，但是为了开源，大家都能方便实用，搞了一个Linux一样。所以你懂我意思吧，就是为了让大家更好的学习和理解JS原型链，所以我特意自制了这个项目，将原作者的效果还原出来，公开让大家都方便学习和理解原型链。有想法的各位技术大牛们，欢迎加入此项目继续完善，这个项目完全开源，目的是让大家更好的可视化原型链图谱和理解原型链知识！谢谢！:smiley:
