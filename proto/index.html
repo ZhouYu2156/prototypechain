@@ -1,0 +1,473 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>JavaScript原型链可视化工具</title>
+    <!-- 核心依赖 -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3-sankey@0.12.3/dist/d3-sankey.min.js"></script>
+    <style>
+      :root {
+        --bg-primary: #1a1a2e;
+        --neon-purple: #9d00ff;
+        --neon-cyan: #00f0ff;
+        --neon-yellow: #f0ff00;
+      }
+
+      body {
+        margin: 0;
+        padding: 0;
+        background: var(--bg-primary);
+        color: var(--neon-cyan);
+        font-family: 'Courier New', monospace;
+        overflow: hidden;
+      }
+
+      #app {
+        width: 100vw;
+        height: 100vh;
+        position: relative;
+      }
+
+      #prototype-graph {
+        width: 100%;
+        height: 100%;
+      }
+
+      #prototype-graph svg {
+        width: 100%;
+        height: 100%;
+      }
+
+      /* 控制面板 */
+      #control-panel {
+        position: fixed;
+        bottom: 15px;
+        right: 15px;
+        background: rgba(30, 30, 50, 0.85);
+        border: 2px solid;
+        border-image: linear-gradient(135deg, var(--neon-purple), var(--neon-cyan)) 1;
+        padding: 15px;
+        box-shadow: 0 0 15px rgba(157, 0, 255, 0.7);
+      }
+
+      /* 节点样式 */
+      .node-card {
+        width: 420px;
+        background: rgba(30, 30, 50, 0.95);
+        border: 2px solid transparent;
+        position: absolute;
+        box-shadow: 0 0 15px rgba(157, 0, 255, 0.7);
+        pointer-events: all;
+      }
+
+      .node-card::before {
+        content: '';
+        position: absolute;
+        top: -2px;
+        left: -2px;
+        right: -2px;
+        bottom: -2px;
+        background: linear-gradient(135deg, var(--neon-purple), var(--neon-cyan));
+        z-index: -1;
+        pointer-events: none;
+      }
+
+      .node-header {
+        padding: 8px 12px;
+        border-bottom: 1px solid var(--neon-cyan);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .node-title {
+        font-weight: bold;
+        text-shadow: 0 0 5px currentColor;
+      }
+
+      .node-type {
+        font-size: 0.8em;
+        opacity: 0.8;
+      }
+
+      .node-content {
+        padding: 4px 0;
+      }
+
+      /* 属性列表样式 */
+      .property-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 4px 12px;
+        border-bottom: 1px solid rgba(0, 240, 255, 0.1);
+        min-height: 24px;
+      }
+
+      .property-name {
+        color: var(--neon-cyan);
+        cursor: pointer;
+        font-weight: 500;
+        flex: 0 0 280px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .property-name:hover {
+        text-shadow: 0 0 8px var(--neon-cyan);
+      }
+
+      .property-type {
+        font-size: 0.9em;
+        padding: 2px 8px;
+        border-radius: 3px;
+        font-family: 'Courier New', monospace;
+        flex: 0 0 100px;
+        text-align: right;
+        white-space: nowrap;
+      }
+
+      /* 不同类型的颜色 */
+      .property-type[data-type='function'] {
+        color: var(--neon-purple);
+      }
+
+      .property-type[data-type='string'] {
+        color: #00ff95;
+      }
+
+      .property-type[data-type='number'] {
+        color: #ff9500;
+      }
+
+      .property-type[data-type='boolean'] {
+        color: #ff00ff;
+      }
+
+      .property-type[data-type='object'] {
+        color: #00ffff;
+      }
+
+      .property-type[data-type='undefined'] {
+        color: #888888;
+      }
+
+      .property-type[data-type='accessor'] {
+        color: #ffff00;
+      }
+
+      /* 连接线样式 */
+      .link {
+        fill: none;
+        stroke-width: 2;
+        pointer-events: none;
+      }
+
+      /* prototype 连线样式 */
+      .link-prototype {
+        stroke: #f0ff00;
+        stroke-opacity: 0.8;
+      }
+
+      /* __proto__ 连线样式 */
+      .link-proto {
+        stroke: #9d00ff;
+        stroke-dasharray: 5, 5;
+        stroke-opacity: 0.8;
+      }
+
+      /* 流动点样式 */
+      .flow-circle {
+        fill: currentColor;
+        opacity: 0.8;
+      }
+
+      /* SVG 容器层级 */
+      #prototype-graph {
+        width: 100%;
+        height: 100%;
+      }
+
+      #prototype-graph svg {
+        width: 100%;
+        height: 100%;
+      }
+
+      /* 连线容器层级 */
+      .links {
+        position: relative;
+        z-index: 2;
+      }
+
+      /* 节点容器层级 */
+      .nodes {
+        position: relative;
+        z-index: 1;
+      }
+
+      /* 箭头样式 */
+      marker#arrow-proto path {
+        fill: #9d00ff;
+      }
+
+      marker#arrow-prototype path {
+        fill: #f0ff00;
+      }
+
+      marker#arrow-constructor path {
+        fill: #00f0ff;
+      }
+
+      /* 流光动画 */
+      .link-flow {
+        pointer-events: none;
+      }
+
+      .link-flow circle {
+        fill: #fff;
+        filter: drop-shadow(0 0 2px #fff);
+      }
+
+      .link-proto .link-flow circle {
+        fill: #9d00ff;
+        filter: drop-shadow(0 0 3px #9d00ff);
+      }
+
+      .link-prototype .link-flow circle {
+        fill: #f0ff00;
+        filter: drop-shadow(0 0 3px #f0ff00);
+      }
+
+      .link-constructor .link-flow circle {
+        fill: #00f0ff;
+        filter: drop-shadow(0 0 3px #00f0ff);
+      }
+
+      /* 按钮样式 */
+      .cyber-button {
+        background: transparent;
+        color: var(--neon-cyan);
+        border: 1px solid var(--neon-cyan);
+        padding: 8px 15px;
+        margin: 5px;
+        cursor: pointer;
+        text-transform: uppercase;
+        font-family: 'Courier New', monospace;
+        transition: all 0.3s ease;
+      }
+
+      .cyber-button:hover {
+        background: rgba(0, 240, 255, 0.2);
+        box-shadow: 0 0 10px var(--neon-cyan);
+      }
+
+      /* 工具提示 */
+      .tooltip {
+        position: absolute;
+        background: rgba(30, 30, 50, 0.95);
+        border: 1px solid var(--neon-cyan);
+        padding: 8px;
+        font-size: 0.9em;
+        pointer-events: none;
+        z-index: 1000;
+      }
+
+      /* 连接点样式 */
+      .input-port,
+      .output-port {
+        cursor: pointer;
+        transition: all 0.3s ease;
+        pointer-events: all;
+        z-index: 3;
+      }
+
+      .input-port:hover,
+      .output-port:hover {
+        r: 6;
+        filter: drop-shadow(0 0 4px #00f0ff);
+      }
+
+      .pannel {
+        --pannel-bg: rgb(25, 35, 45);
+        --neon-color: #ff6b6b;
+
+        display: block;
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 400px;
+        height: 150px;
+        background-color: var(--pannel-bg);
+        color: #fff;
+        border-radius: 10px 0 0 0;
+        padding: 0 8px;
+        user-select: none;
+
+        h1 {
+          margin: 5px 10px;
+          color: inherit;
+          font: 24px '楷体';
+          text-align: center;
+          letter-spacing: 10px;
+        }
+
+        .stardard-objects {
+          display: flex;
+          flex-wrap: wrap;
+          justify-content: left;
+
+          .item {
+            display: inline-block;
+            padding: 3px 5px;
+            margin: 5px 5px 0;
+            border-radius: 5px;
+            background: #232323;
+            color: inherit;
+            border-width: 0;
+            font-family: 'JetBrains Mono';
+            cursor: pointer;
+            transition: all 0.5s ease;
+            transform-origin: center;
+
+            &:hover {
+              background: linear-gradient(135deg, #ff6b6b, #ff4c4c);
+              color: #101010;
+              box-shadow:
+                0 0 10px var(--neon-color),
+                0 0 15px var(--neon-color),
+                0 0 5px var(--neon-color);
+            }
+
+            &:active {
+              transform: scale(0.95);
+            }
+          }
+        }
+      }
+
+      :root {
+        /** common style */
+        --pro-height: 50px;
+        --pro-font: 'JetBrains Mono', sans-serif;
+        --pro-font-size: 20px;
+        --pro-font-style: italic;
+        --pro-font-weight: bolder;
+        --pro-text-color: #fff;
+        --pro-search-focus-border-color: #06a17b;
+        --pro-search-hover-border-color: rgb(141, 5, 179);
+
+        /** searchContainer */
+        --pro-search-top: 35px;
+        --pro-search-left: 50%;
+        --pro-search-transform: translateX(-50%);
+
+        /** searchInput */
+        --pro-search-input-width: 400px;
+        --pro-search-input-bd-radius: 25px 0 0 25px;
+
+        /** searchBtn */
+        --pro-search-btn-width: 200px;
+        --pro-search-btn-bd-radius: 0 25px 25px 0;
+      }
+      /** 搜索框容器 */
+      #searchContainer {
+        display: flex;
+        position: absolute;
+        top: 35px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 600px;
+        height: 50px;
+        z-index: 1000;
+      }
+
+      #searchInput {
+        flex: 2;
+        height: 100%;
+        background-color: rgba(120, 120, 120, 0.3);
+        color: #fff;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 16px;
+        letter-spacing: 2px;
+        border-radius: 25px 0 0 25px;
+        padding: 0 20px;
+        border: 1px solid #383838;
+        border-right: none;
+        outline: none;
+        transition: all 0.3s ease-in-out;
+      }
+
+      #searchInput::placeholder {
+        color: #eee;
+      }
+
+      #searchInput:focus {
+        border-color: #06a17b;
+      }
+
+      #searchBtn {
+        flex: 1;
+        height: 100%;
+        border-radius: 0 25px 25px 0;
+        border: 1px solid #383838;
+        border-left: none;
+        outline: none;
+        cursor: pointer;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 16px;
+        color: #fff;
+        background: linear-gradient(to right, rgba(145, 143, 143, 0.88), rgba(240, 240, 240, 0.1));
+        transition: all 0.3s ease-in-out;
+      }
+
+      #searchContainer:hover #searchInput {
+        border-color: rgb(141, 5, 179);
+      }
+
+      #searchContainer:hover #searchBtn {
+        border-color: rgb(141, 5, 179);
+        background-image: linear-gradient(
+          to right,
+          rgba(8, 176, 84, 0.687),
+          rgba(199, 3, 52, 0.637)
+        );
+      }
+
+      #searchContainer:focus-within #searchInput {
+        border-color: #06a17b;
+      }
+
+      #searchContainer:focus-within #searchBtn {
+        border-color: #06a17b;
+        background-image: linear-gradient(
+          to right,
+          rgba(10, 189, 91, 0.646),
+          rgba(199, 3, 52, 0.8)
+        );
+      }
+
+      #searchBtn:active {
+        background-image: linear-gradient(to right, rgba(8, 176, 84, 0.566), rgba(199, 3, 52, 0.5));
+        transform: scale(0.98);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <div id="prototype-graph"></div>
+      <div id="control-panel">
+        <button class="cyber-button" id="reset-view">重置视图</button>
+        <button class="cyber-button" id="add-custom">添加自定义对象</button>
+        <button class="cyber-button" id="export-svg">导出SVG</button>
+      </div>
+    </div>
+    <div id="searchContainer">
+      <input type="search" id="searchInput" placeholder="输入内置对象名称" autocomplete="off" />
+      <button id="searchBtn">MDN Search</button>
+    </div>
+    <script type="module" src="js/main.js"></script>
+  </body>
+</html>
