@@ -440,6 +440,7 @@ class PrototypeVisualizer {
 
       // Object.prototype -> Object 构造函数
       new PrototypeLink(objectPrototype, objectConstructor, 'proto'),
+      new PrototypeLink(functionPrototype, objectConstructor, 'proto'), // function原型对象的隐式原型指向Object构造函数
 
       // 原型对象 -> 对应的构造函数
       new PrototypeLink(functionPrototype, functionConstructor, 'prototype'),
